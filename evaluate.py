@@ -96,6 +96,9 @@ def evaluate(model, index, opt, data_path, step=None):
 
     for i, batch in enumerate(data_iterator):
         query = batch.get("query", [""])
+        #query=["question: Who is Jeff Bezos?"]
+        print("te voy a decir el query")
+        print(query)
         answers = batch.get("target", [""])
         batch_metadata = batch.get("metadata")
         target_tokens = batch.get("target_tokens")
@@ -114,12 +117,18 @@ def evaluate(model, index, opt, data_path, step=None):
             )
         else:
             assert "passages" in batch, "cant use use_file_passages mode without passing in passages"
-            retrieved_passages = [p[: opt.n_context] for p in batch["passages"]]
-
+            print("Hola a todos amigos")
+            print(batch)
+            #retrieved_passages=batch["passages"]
+            retrieved_passages= [{"id": "0","title": "Machine Learning","text": "Jeffrey Preston Bezos ( BAY-zohss; né Jorgensen; born January 12, 1964) is an American entrepreneur, media proprietor, investor, and commercial astronaut. He is the founder, executive chairman, and former president and CEO of Amazon. With a net worth of US$128 billion as of February 2023, Bezos is the third-wealthiest person in the world and was the wealthiest from 2017 to 2021 according to both Bloomberg's Billionaires Index and Forbes.Born in Albuquerque and raised in Houston and Miami, Bezos graduated from Princeton University in 1986. He holds a degree in electrical engineering and computer science. He worked on Wall Street in a variety of related fields from 1986 to early 1994. Bezos founded Amazon in late 1994 on a road trip from New York City to Seattle. The company began as an online bookstore and has since expanded to a variety of other e-commerce products and services, including video and audio streaming, cloud computing, and artificial intelligence. It is the world's largest online sales company, the largest Internet company by revenue, and the largest provider of virtual assistants and cloud infrastructure services through its Amazon Web Services branch.Bezos founded the aerospace manufacturer and sub-orbital spaceflight services company Blue Origin in 2000. Blue Origin's New Shepard vehicle reached space in 2015 and afterwards successfully landed back on Earth. He also purchased the major American newspaper The Washington Post in 2013 for $250 million and manages many other investments through his venture capital firm, Bezos Expeditions. In September 2021, Bezos co-founded biotechnology company Altos Labs with Mail.ru founder Yuri Milner.The first centibillionaire on the Forbes wealth index, Bezos was named the richest man in modern history after his net worth increased to $150 billion in July 2018. In August 2020, according to Forbes, he had a net worth exceeding $200 billion. In 2020 during the COVID-19 pandemic, his wealth grew by approximately $24 billion. On July 5, 2021, Bezos stepped down as the CEO and President of Amazon and transferred to the role of executive chairman; Andy Jassy, the chief of Amazon's cloud computing division, succeeded Bezos as the CEO and President of Amazon. On July 20, 2021, he flew to space alongside his half-brother, Mark. The suborbital flight lasted over 10 minutes, reaching a peak altitude of 66.5 miles (107.0 km). In September 2022, he was ranked second on the Forbes 400 list of wealthiest Americans with a net worth of $151 billion."}]
+          
         # If example is a padding example then skip step
         if (len(query) == 0) or (len(query[0]) == 0):
             continue
-
+        print("query")
+        print(query)
+        print("passages")
+        print(retrieved_passages)
         reader_tokens, _ = unwrapped_model.tokenize_passages(query, retrieved_passages)
 
         if "eval_loss" in task.metrics:
@@ -129,7 +138,10 @@ def evaluate(model, index, opt, data_path, step=None):
         generation = unwrapped_model.generate(
             reader_tokens, query, choices=batch["choices"] if "choices" in batch else None
         )
-
+        print("Los reader_token")
+        print(reader_tokens)
+        print("La generation rara es ")
+        print(generation)
         for k, g in enumerate(generation):
             if opt.decoder_prompt_format is not None:
                 query_ids = reader_tokenizer.encode(
@@ -143,6 +155,8 @@ def evaluate(model, index, opt, data_path, step=None):
                 metrics[key].append(value)
 
             if opt.write_results:
+                print("La generación es") 
+                print(pred)
                 ex = {"query": query[k], "answers": gold, "generation": pred}
                 if not opt.dont_write_passages:
                     ex["passages"] = retrieved_passages[k]
@@ -168,8 +182,10 @@ def evaluate(model, index, opt, data_path, step=None):
 if __name__ == "__main__":
     options = get_options()
     opt = options.parse()
-
+    print(opt.local_rank)
+    
     torch.manual_seed(opt.seed)
+    print(opt.local_rank)
     slurm.init_distributed_mode(opt)
     slurm.init_signal_handler()
 
@@ -177,8 +193,8 @@ if __name__ == "__main__":
 
     logger = util.init_logger(opt.is_main, opt.is_distributed, os.path.join(checkpoint_path, "run.log"))
     if opt.is_main:
-        options.print_options(opt)
-
+        #options.print_options(opt)
+        print(opt)
     logger.info(f"world size: {dist_utils.get_world_size()}")
 
     index, passages = load_or_initialize_index(opt)
@@ -200,7 +216,10 @@ if __name__ == "__main__":
         if opt.retrieve_only:
             run_retrieval_only(model, index, opt, data_path, step)
         else:
+            t3=time.time()
             metrics = evaluate(model, index, opt, data_path, step)
+            t4=time.time()
+            print("El tiempo de evaluación ha sido de " + str(t4-t3) + " s")
             log_message = f"Dataset: {dataset_name}"
             for k, v in metrics.items():
                 log_message += f" | {v:.3f} {k}"

@@ -182,6 +182,10 @@ class Atlas(nn.Module):
         return passages, scores
 
     def append_query(self, query, passages):
+        #print("Estamos en append_query")
+        #query=["question: How much money does Jeff Bezos has? answer: <extra_id_0>"]
+        #print(query)
+        #query="What is Machine Learning?"
         return [self.opt.encoder_format.format(query=query, **p) for p in passages]
 
     def retriever_tokenize(self, query):
@@ -261,9 +265,10 @@ class Atlas(nn.Module):
     def tokenize_passages(self, query, passages):
         if len(query) == 0:
             return None, None
-
+        passages=[passages]
         query_passages = [self.append_query(q, p) for q, p in zip(query, passages)]
-
+        #print("los query_passages son")
+        #print(query_passages)
         fstr = self.opt.retriever_format
         retriever_passages = [[fstr.format(**p) for p in example] for example in passages]
         if self.retriever_tokenizer:
